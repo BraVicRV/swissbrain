@@ -1,0 +1,58 @@
+# --- Entorno virtual ---
+venv/
+env/
+.env
+.env.local
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+
+# --- Base de datos ---
+*.db
+*.sqlite3
+*.sqlite
+*.db-journal
+
+# --- Logs ---
+logs/*
+!logs/.gitkeep
+*.log
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Testing ---
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# --- Build/Packaging ---
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+wheelhouse/
+
+# --- Jupyter (si usas en el futuro) ---
+.ipynb_checkpoints/
+
+# --- Documentación generada ---
+docs/_build/
