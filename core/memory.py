@@ -61,6 +61,25 @@ class Memory:
                     description TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT,
+                    user_message TEXT,
+                    intent TEXT,
+                    topic TEXT,
+                    modules_used TEXT,
+                    status TEXT DEFAULT 'pending',
+                    result_summary TEXT,
+                    error TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS user_profile (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    updated_at TEXT
+                );
             """)
     
     def log_interaction(self, user_message: str, intent: str, 
@@ -151,3 +170,88 @@ class Memory:
                 VALUES (?, ?, ?, ?, ?)
             """, (finding_1_id, finding_2_id, correlation_type, 
                   confidence, description))
+
+    def get_recent_interactions(self, limit: int = 6) -> List[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("""
+                SELECT timestamp, user_message, intent, response_summary
+                FROM interactions
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """, (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def add_task(self, user_message: str, intent: str, topic: str,
+                 modules_used: List[str]) -> int:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("""
+                INSERT INTO tasks
+                (user_message, intent, topic, modules_used, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                user_message,
+                intent,
+                topic,
+                json.dumps(modules_used, ensure_ascii=False),
+                datetime.now().isoformat()
+            ))
+            return cursor.lastrowid
+
+    def update_task(self, task_id: int, status: str, result_summary: str = "",
+                    error: str = ""):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE tasks
+                SET status = ?, result_summary = ?, error = ?, updated_at = ?
+                WHERE id = ?
+            """, (
+                status,
+                result_summary,
+                error,
+                datetime.now().isoformat(),
+                task_id
+            ))
+
+    def get_recent_tasks(self, limit: int = 10) -> List[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("""
+                SELECT *
+                FROM tasks
+                ORDER BY created_at DESC
+                LIMIT ?
+            """, (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def set_profile_value(self, key: str, value: Any):
+        stored_value = json.dumps(value, ensure_ascii=False)
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO user_profile (key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+            """, (key, stored_value, datetime.now().isoformat()))
+
+    def update_user_profile(self, values: Dict[str, Any]):
+        for key, value in values.items():
+            if value not in (None, "", []):
+                self.set_profile_value(key, value)
+
+    def get_user_profile(self) -> Dict[str, Any]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT key, value FROM user_profile")
+            profile = {}
+            for row in cursor.fetchall():
+                try:
+                    profile[row["key"]] = json.loads(row["value"])
+                except json.JSONDecodeError:
+                    profile[row["key"]] = row["value"]
+            return profile
+
+    def has_job_profile(self) -> bool:
+        profile = self.get_user_profile()
+        return bool(profile.get("specialty") or profile.get("skills") or profile.get("desired_roles"))

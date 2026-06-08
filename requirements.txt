@@ -1,6 +1,13 @@
+# Dependencias principales
 groq>=0.4.0
 python-telegram-bot>=20.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 aiohttp>=3.9.0
 feedparser>=6.0.0
+
+# Dependencias para autonomía y programación de tareas
+apscheduler>=3.10.0
+
+# Dependencias para manejo de fechas y zonas horarias
+python-dateutil>=2.8.2
